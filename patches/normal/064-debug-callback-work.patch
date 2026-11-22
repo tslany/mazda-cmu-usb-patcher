@@ -1,0 +1,35 @@
+--- a/jci/gui/framework/js/Debug.js
++++ b/jci/gui/framework/js/Debug.js
+@@ -789,6 +789,10 @@
+  */
+ Debug.prototype.triggerEvtToMmuiCallbacks = function(uiaId, eventId, params)
+ {
++    if (!this._mmuiCallbackAvail && !framework.debugMode)
++    {
++        return;
++    }
+     // Use a timeout here to create an asynchronous event, simulating the round-trip to MMUI.
+     // The asynchronous event will create a new thread in JavaScript, allowing any code to complete
+     // before the MMUI callbacks are made.
+@@ -889,6 +893,10 @@
+  */
+ Debug.prototype.triggerReqToDbapiCallback = function(uiaId, msg)
+ {
++    if (!this._dbapiCallbackAvail && !framework.debugMode)
++    {
++        return;
++    }
+     // Use a timeout here to create an asynchronous event, simulating the round-trip to DBAPI.
+     // The asynchronous event will create a new thread in JavaScript, allowing any code to complete
+     // before the DBAPI callbacks are made.
+@@ -923,6 +931,10 @@
+  */
+ Debug.prototype.triggerReqToAppsdkCallback = function(uiaId, msg)
+ {
++    if (!this._appsdkCallbackAvail && !framework.debugMode)
++    {
++        return;
++    }
+     // Use a timeout here to create an asynchronous event, simulating the round-trip to AppSDK.
+     // The asynchronous event will create a new thread in JavaScript, allowing any code to complete
+     // before the AppSDK callbacks are made.   

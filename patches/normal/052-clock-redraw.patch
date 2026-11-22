@@ -1,0 +1,11 @@
+--- a/jci/gui/apps/syssettings/js/syssettingsApp.js
++++ b/jci/gui/apps/syssettings/js/syssettingsApp.js
+@@ -4608,8 +4608,6 @@
+                         var gpsSyncStatus = this._cachedGPSSync === "On" ? true : false;
+ 
+                         this._EnableDisableClockTabItemsOnGpsSyncStatus(gpsSyncStatus);
+-                        
+-                        tmplt.list2Ctrl.updateItems(0, tmplt.list2Ctrl.dataList.items.length-1);
+                         break;
+                     case "SelectTimeZone":
+                         var timeZoneItemsCount = tmplt.list2Ctrl.dataList.items.length;

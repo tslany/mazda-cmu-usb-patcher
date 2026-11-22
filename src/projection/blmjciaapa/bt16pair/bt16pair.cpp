@@ -1,0 +1,395 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// Wireless GAL-1.6 Bluetooth-pairing bypass. See bt16pair.h for the
+// full rationale.
+
+#define LOG_TAG "BT16PAIR"
+#include "../log.h"
+#include "bt16pair.h"
+
+#include "common/config.h"        // libpatch_config::use_protocol_v1_6()
+#include "../oem/blmjciaapa.h"    // AapConnectionManager_* accessors
+#include "common/thread_util.h"
+#include "projection.h"
+
+#include <pthread.h>
+#include <algorithm>
+#include <cctype>
+#include <string.h>
+#include <unistd.h>
+
+#include <string>
+
+namespace {
+
+// cb_list slot 3 = RaceAap::ProjectionStatusCb(void* user, int ev,
+// void* data). Authoritative layout from RaceAap::Init (blmjciaapa.so
+// FW 74.00.324A, file offset 0x8c64c) — a 76-byte / 19-word-slot table:
+//   [0] OnErrorCb          [5] BtPairingReqCb    [10] NULL (nav/HUD slot)
+//   [1] SessionStatusCb    [6] BtAuthStatusCb    [11..17] NULL
+//   [2] StreamRequestCb    [7] NULL              [18] user_ctx
+//   [3] ProjectionStatusCb [8] MediaPlaybackStatusCb
+//   [4] AudioStateCb       [9] PhoneStatusCb
+// Slot 18 is the user context the SDK passes as the 1st arg to every
+// callback (OEM leaves it NULL). Re-harvest after any OEM update.
+namespace sdk_layout = fw74_00_324a::aap_sdk;
+
+// AAP_ProjectionEventType values (RaceAap Enum2Str table):
+//   0x400 NONE, 0x401 ON, 0x402 OFF, 0x403 SETUP, 0x404 CONFIG.
+constexpr int kAapProjectionSetup = 0x403;
+
+// USB device name (AapConnectionManager + 0x54) presented by the
+// wireless dongle in passthrough mode. A wired phone reports its own
+// model name (e.g. "Pixel 9 Pro XL") instead.
+constexpr char const *kDongleDevNames[] = {
+    "AAWireless",
+    "smartBox",
+    "smartlinkBox",
+    "carplay",
+    "carlink",
+    "motorolama1",
+    "AutoKit",
+    "Accessory",
+    "CAR2"
+};
+
+constexpr char const *kExactDongleDevNames[] = {
+    "AIBox",
+    "AIBox-BT"
+};
+
+// AapConnectionManager connect-mode values (instance + 0xdc). Offset and
+// semantics EMPIRICALLY pinned by a 3-state /proc/mem object diff
+// (idle/wired/dongle, 2026-07-06): 0 while idle, 2 the moment the AOA
+// session connects (the dongle parks here at GAL 1.6 waiting for the BT
+// pairing request the phone never sends), 3 once ActivateAapSession runs.
+constexpr int kConnModeIdle        = 0;
+constexpr int kConnModePendingPair = 2;
+constexpr int kConnModeActivated   = 3;
+
+// Original OEM ProjectionStatusCb, saved when we wrap slot 3. RaceAap::Init
+// builds the cb_list once per BLM process, so a single global suffices.
+typedef int (*ProjStatusFn)(void *user, int ev, void *data);
+ProjStatusFn g_orig_proj_cb = nullptr;
+
+// Single-flight guard for the deferred activator: at most one poll
+// thread in flight at a time, re-armable per device connect once the
+// previous one has exited.
+pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t g_activation_call_mu = PTHREAD_MUTEX_INITIALIZER;
+bool g_activator_running = false;
+bool g_accept_setup = false;
+uint32_t g_activation_epoch = 0;
+
+// AIBox uses short generic names, so accept those only as exact
+// case-insensitive matches. Retain the established substring matching for the
+// older dongles whose descriptors may carry a model or serial suffix.
+bool is_known_device(const char* currentDeviceName) 
+{
+    if (currentDeviceName == nullptr) return false;
+
+    const size_t current_len = strlen(currentDeviceName);
+    for (size_t i = 0;
+         i < sizeof(kExactDongleDevNames) / sizeof(kExactDongleDevNames[0]);
+         ++i) {
+        const char *known = kExactDongleDevNames[i];
+        const size_t known_len = strlen(known);
+        if (current_len == known_len &&
+            std::equal(currentDeviceName, currentDeviceName + current_len,
+                       known,
+                       [](char left, char right) {
+                           return std::tolower(static_cast<unsigned char>(left)) ==
+                                  std::tolower(static_cast<unsigned char>(right));
+                       })) {
+            return true;
+        }
+    }
+
+    const size_t elementCount = sizeof(kDongleDevNames) / sizeof(kDongleDevNames[0]);
+
+    for (size_t i = 0; i < elementCount; ++i) {
+        const char *knownName = kDongleDevNames[i];
+        const char *match = std::search(
+            currentDeviceName, currentDeviceName + strlen(currentDeviceName),
+            knownName, knownName + strlen(knownName),
+            [](char left, char right) {
+                return std::tolower(static_cast<unsigned char>(left)) ==
+                       std::tolower(static_cast<unsigned char>(right));
+            });
+        if (match != currentDeviceName + strlen(currentDeviceName)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Deferred activator.
+//
+// The ProjectionStatusCb runs on the SDK IPC thread when projection is
+// set up. On a wired phone the OEM then receives the in-band Bluetooth
+// pairing request, calls NotifyBtPairingResult(success), and that runs
+// ActivateAapSession — which is what actually gives AA the video focus.
+// Over wireless dongles at GAL 1.6 the phone deliberately skips that
+// pairing request, so the OEM parks at connect-mode 2 (pending-pair)
+// forever and video focus is never granted.
+//
+// This thread only ever runs for the dongle (the caller gates on
+// dev=="AAWireless", "smartBox" etc), so we watch for that exact stuck state. 
+// Each poll:
+//   - if AA already holds video focus, or mode==3 (activated), a genuine
+//     activation happened (GAL 1.5, or a pairing that did arrive) — do
+//     nothing.
+//   - if mode==2 (pending-pair) — this is the dongle parked waiting for
+//     the missing BT pairing — call ActivateAapSession(cm) directly,
+//     once. That is exactly the activation the missing pairing-result
+//     path performs (StartResourcesControl, ResumeLastMode,
+//     NotifyBTConnectionComplete, mode:=3); it takes no precondition.
+//   - otherwise (mode 0 / transient) keep polling until the AOA session
+//     connects and mode becomes 2, up to the grace ceiling.
+// The connect-mode offset (0xdc) was empirically triangulated, so gating
+// on mode==2 is now safe. Single-flight guard + once-per-SETUP nature
+// prevent any double activation.
+void *activator_thread(void *arg)
+{
+    const uint32_t epoch = static_cast<uint32_t>(
+        reinterpret_cast<uintptr_t>(arg));
+    const int        kGraceTries = 30;     // ~3 s ceiling to reach mode==2
+    const useconds_t kStepUs     = 100000; // 100 ms poll interval
+
+    LOGD("bt16pair: activator thread started (poll up to %d x %d ms for "
+         "connect-mode==2, then force ActivateAapSession)",
+         kGraceTries, static_cast<int>(kStepUs / 1000));
+
+    bool injected = false;
+    for (int i = 0; i < kGraceTries; ++i) {
+        // Serialize the final epoch/device check and any OEM activation against
+        // aap_stop_session/aap_destroy_session.  Lifecycle cancellation takes
+        // this gate before invalidating the epoch and before entering the OEM
+        // stop, so an activation is either completed on the still-live session
+        // or rejected before it can touch a later one.
+        pthread_mutex_lock(&g_activation_call_mu);
+        pthread_mutex_lock(&g_mu);
+        const bool current = g_accept_setup && g_activator_running &&
+                             g_activation_epoch == epoch;
+        pthread_mutex_unlock(&g_mu);
+        if (!current) {
+            pthread_mutex_unlock(&g_activation_call_mu);
+            LOGD("bt16pair: activator epoch %u canceled", epoch);
+            break;
+        }
+
+        void *aap = Singleton_AapProc_GetInstance();
+        void *vm  = aap ? AapProc_GetVideoManager(aap) : nullptr;
+        int   focus = vm ? VideoManager_IsAAVideoInFocus(vm) : 0;
+        void *cm  = AapConnectionManager_instance();
+        int   mode = cm ? AapConnectionManager_connect_mode(cm) : -1;
+        const char *dev = cm ? AapConnectionManager_dev_name(cm) : nullptr;
+        const bool device_allowed =
+            libpatch_config::bt_pairing_bypass_all_devices() ||
+            (dev != nullptr && is_known_device(dev));
+
+        LOGV("bt16pair: activator poll #%d/%d: aap=%p vm=%p focus=%d cm=%p "
+             "mode=%d", i + 1, kGraceTries, aap, vm, focus, cm, mode);
+
+        // Natural activation already happened — nothing to do.
+        if (focus || mode == kConnModeActivated) {
+            LOGD("bt16pair: AA activated on its own after ~%d ms "
+                 "(focus=%d mode=%d); no inject needed", i * 100, focus, mode);
+            pthread_mutex_unlock(&g_activation_call_mu);
+            break;
+        }
+
+        // The dongle-stuck state: AOA session up, parked waiting for a BT
+        // pairing that will never arrive. Force the activation the OEM
+        // would have run on pairing success.
+        if (cm && mode == kConnModePendingPair) {
+            // Revalidate the live device at the exact call boundary.  The SETUP
+            // event that spawned us may belong to a session that has since gone
+            // away; an epoch match alone must never turn an unrelated wired
+            // phone's mode-2 state into a forced activation.
+            if (!device_allowed) {
+                LOGW("bt16pair: pending-pair device \"%s\" no longer matches "
+                     "the bypass gate; not injecting",
+                     dev ? dev : "(null)");
+                pthread_mutex_unlock(&g_activation_call_mu);
+                break;
+            }
+            LOGD("bt16pair: connect-mode==2 (pending-pair, dongle stuck) after "
+                 "~%d ms — forcing ActivateAapSession(cm=%p)", i * 100, cm);
+            AapConnectionManager_ActivateAapSession(cm);
+            injected = true;
+
+            void *vm2 = aap ? AapProc_GetVideoManager(aap) : nullptr;
+            int   f2  = vm2 ? VideoManager_IsAAVideoInFocus(vm2) : 0;
+            int   m2  = AapConnectionManager_connect_mode(cm);
+            LOGD("bt16pair: post-inject AA video focus=%d mode=%d", f2, m2);
+            pthread_mutex_unlock(&g_activation_call_mu);
+            break;
+        }
+
+        pthread_mutex_unlock(&g_activation_call_mu);
+        usleep(kStepUs);
+    }
+
+    if (!injected)
+        LOGD("bt16pair: activator exited without injection");
+
+    pthread_mutex_lock(&g_mu);
+    // A canceled detached worker may finish after the next session has already
+    // spawned its own epoch.  Never clear that newer worker's single-flight bit.
+    if (g_activation_epoch == epoch) {
+        g_activator_running = false;
+    }
+    pthread_mutex_unlock(&g_mu);
+    LOGD("bt16pair: activator thread exiting (injected=%d)", injected ? 1 : 0);
+    return nullptr;
+}
+
+void spawn_activator_once(void)
+{
+    pthread_mutex_lock(&g_mu);
+    bool spawn = g_accept_setup && !g_activator_running;
+    uint32_t epoch = 0;
+    if (spawn) {
+        g_activator_running = true;
+        epoch = ++g_activation_epoch;
+    }
+    pthread_mutex_unlock(&g_mu);
+
+    if (!spawn) {
+        LOGD("bt16pair: activator already in flight; not re-spawning");
+        return;
+    }
+
+    pthread_t t;
+    void *arg = reinterpret_cast<void *>(static_cast<uintptr_t>(epoch));
+    if (preload_thread_create(&t, activator_thread, arg) == 0) {
+        pthread_detach(t);
+        LOGD("bt16pair: spawned deferred pairing-bypass activator");
+    } else {
+        LOGW("bt16pair: pthread_create failed; clearing single-flight guard");
+        pthread_mutex_lock(&g_mu);
+        if (g_activation_epoch == epoch)
+            g_activator_running = false;
+        pthread_mutex_unlock(&g_mu);
+    }
+}
+
+// Transparent ProjectionStatusCb wrapper. Always chains to the OEM
+// callback first (keeps native behaviour intact), then — only for the
+// wireless GAL-1.6 case — arms the deferred activator on SETUP.
+int our_projection_status_cb(void *user, int ev, void *data)
+{
+    int rc = g_orig_proj_cb ? g_orig_proj_cb(user, ev, data) : 0;
+
+    // Per-invocation trace (verbose; every projection event reaches here).
+    // Resolve the connection manager / device name / connect mode for both
+    // the log and the SETUP gate below.
+    void       *cm   = AapConnectionManager_instance();
+    const char *dev  = cm ? AapConnectionManager_dev_name(cm) : nullptr;
+    int         mode = cm ? AapConnectionManager_connect_mode(cm) : -1;
+    bool        all_devices = libpatch_config::bt_pairing_bypass_all_devices();
+    LOGV("bt16pair: proj cb: ev=0x%x user=%p data=%p v1_6=%d cm=%p "
+            "dev=\"%s\" mode=%d all_devices=%d (orig_cb=%p rc=%d)",
+         ev, user, data, libpatch_config::use_protocol_v1_6() ? 1 : 0, cm,
+            dev ? dev : "(null)", mode, all_devices ? 1 : 0,
+         reinterpret_cast<void *>(g_orig_proj_cb), rc);
+
+    if (ev != kAapProjectionSetup) {
+        LOGV("bt16pair: proj cb: ev 0x%x is not AAP_PROJECTION_SETUP (0x%x); "
+             "not arming", ev, kAapProjectionSetup);
+        return rc;
+    }
+    if (!libpatch_config::use_protocol_v1_6()) {
+        LOGD("bt16pair: proj cb: SETUP but use_protocol_v1_6 disabled; not arming");
+        return rc;
+    }
+    if (!cm) {
+        LOGW("bt16pair: proj cb: SETUP but AapConnectionManager unavailable; "
+             "not arming");
+        return rc;
+    }
+
+    if (!all_devices && (!dev || !is_known_device(dev))) {
+        LOGD("bt16pair: proj cb: SETUP but dev=\"%s\" is not known dongle; not arming",
+             dev ? dev : "(null)");
+        return rc;
+    }
+
+    LOGD("bt16pair: AAP_PROJECTION_SETUP on \"%s\" with use_protocol_v1_6 "
+        "(mode=%d all_devices=%d) — arming BT-pairing bypass",
+        dev ? dev : "(null)", mode, all_devices ? 1 : 0);
+        
+    spawn_activator_once();
+    return rc;
+}
+
+} // namespace
+
+void bt16pair_pre_aap_create_session(void *cb_list)
+{
+    if (!cb_list) {
+        LOGW("bt16pair_pre_aap_create_session: NULL cb_list, skipping");
+        return;
+    }
+
+    // A successful SETUP callback may now arm this session's worker.  Stop and
+    // destroy close this admission before entering the corresponding OEM call.
+    pthread_mutex_lock(&g_mu);
+    g_accept_setup = true;
+    pthread_mutex_unlock(&g_mu);
+
+    void **slots = static_cast<void **>(cb_list);
+
+    // Idempotent across aap_create_session retries (the OEM re-passes the
+    // same cb_list stack buffer on rc==0x104): never re-save our own
+    // wrapper as the "original", or we'd recurse infinitely.
+    if (slots[sdk_layout::ProjectionStatusCallbackSlot] ==
+        reinterpret_cast<void *>(&our_projection_status_cb)) {
+        return;
+    }
+
+    g_orig_proj_cb =
+        reinterpret_cast<ProjStatusFn>(
+            slots[sdk_layout::ProjectionStatusCallbackSlot]);
+    slots[sdk_layout::ProjectionStatusCallbackSlot] =
+        reinterpret_cast<void *>(&our_projection_status_cb);
+
+    LOGD("bt16pair_pre_aap_create_session: cb_list=%p slot[%d] %p -> %p "
+         "(proj status wrapper)",
+         cb_list,
+         static_cast<int>(sdk_layout::ProjectionStatusCallbackSlot),
+         reinterpret_cast<void *>(g_orig_proj_cb),
+         reinterpret_cast<void *>(&our_projection_status_cb));
+
+    static_assert(sdk_layout::ProjectionStatusCallbackSlot <
+                      sdk_layout::CallbackTableWords,
+                  "projection callback slot is outside the FW74 table");
+}
+
+void bt16pair_cancel_pending_activation(void)
+{
+    // Gate first, matching the worker's order.  If it is already executing
+    // ActivateAapSession, wait for that call to return while the OEM session is
+    // still live; otherwise invalidate its epoch before it can enter OEM code.
+    pthread_mutex_lock(&g_activation_call_mu);
+    pthread_mutex_lock(&g_mu);
+    g_accept_setup = false;
+    ++g_activation_epoch;
+    g_activator_running = false;
+    pthread_mutex_unlock(&g_mu);
+    pthread_mutex_unlock(&g_activation_call_mu);
+}
+
+void bt16pair_pre_aap_start_session(void)
+{
+    // Stop closes admission even when the SDK handle is retained. Invalidate
+    // old workers and rearm before start can emit the next device's SETUP.
+    pthread_mutex_lock(&g_activation_call_mu);
+    pthread_mutex_lock(&g_mu);
+    ++g_activation_epoch;
+    g_activator_running = false;
+    g_accept_setup = true;
+    pthread_mutex_unlock(&g_mu);
+    pthread_mutex_unlock(&g_activation_call_mu);
+}

@@ -1,0 +1,9 @@
+--- a/jci/sm/sm_WCP.conf
++++ b/jci/sm/sm_WCP.conf
+@@ -224,5 +224,5 @@
+-        <service type="process" name="audio_manager" path="/usr/bin/audioMgr.lua" autorun="yes" reset_board="yes" retry_count="0" args="-m /usr/share/audio_management/audioMgr_SourceMatrix_JCI.lua -g unix:path=/tmp/dbus_service_socket --app unix:path=/tmp/dbus_service_socket --hmi unix:path=/tmp/dbus_hmi_socket -l /usr/share/audio_management/audioMgr_ControlLogic_JCI.lua -vvv" ready_flag="/tmp/dbus/com.xsembedded.service.AudioManagement">
++        <service type="process" name="audio_manager" path="/usr/bin/audioMgr.lua" autorun="yes" reset_board="yes" retry_count="0" args="-m /usr/share/audio_management/audioMgr_SourceMatrix_JCI.lua -g unix:path=/tmp/dbus_service_socket --app unix:path=/tmp/dbus_service_socket --hmi unix:path=/tmp/dbus_hmi_socket -l /usr/share/audio_management/audioMgr_ControlLogic_JCI.lua -v" ready_flag="/tmp/dbus/com.xsembedded.service.AudioManagement">
+             <dependency type="service" value="xsesvc2dbus_service"/>
+             <dependency type="service" value="xsesvc2dbus_tau"/>
+             <dependency type="service" value="audio_control"/>
+         </service>

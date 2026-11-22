@@ -1,0 +1,32 @@
+--- a/jci/gui/common/controls/List2/js/List2Ctrl.js
++++ b/jci/gui/common/controls/List2/js/List2Ctrl.js
+@@ -2361,6 +2361,7 @@
+         {
+             this._sliders[hashKey]['slider'].cleanUp();
+             this._sliders[hashKey]['slider'].divElt.parentElement.removeChild(this._sliders[hashKey]['slider'].divElt);
++            delete this._sliders[hashKey];
+         }
+     }
+ 
+@@ -4351,6 +4352,10 @@
+ 
+     // start animation
+     this.scrollIndicator.style[this._VENDOR + 'TransitionDuration'] = time + 'ms';
++    if (this.scrollIndicatorAnimationEndCallback != null)
++    {
++        this.scrollIndicator.removeEventListener(this._VENDOR + 'TransitionEnd', this.scrollIndicatorAnimationEndCallback, false);
++    }
+     this.scrollIndicatorAnimationEndCallback = this._scrollIndicatorAnimationEnd.bind(this);
+     this.scrollIndicator.addEventListener(this._VENDOR + 'TransitionEnd', this.scrollIndicatorAnimationEndCallback, false);
+     this.scrollIndicator.style.top = newPos + 'px';
+@@ -9005,6 +9010,10 @@
+ 
+     // animate letter index
+     this.letterIndex.style[this._VENDOR + 'TransitionDuration'] = time + 'ms';
++    if (this.letterIndexAnimationEndCallback != null)
++    {
++        this.letterIndex.removeEventListener(this._VENDOR + 'TransitionEnd', this.letterIndexAnimationEndCallback, false);
++    }
+     this.letterIndexAnimationEndCallback = this._letterIndexAnimationEnd.bind(this);
+     this.letterIndex.addEventListener(this._VENDOR + 'TransitionEnd', this.letterIndexAnimationEndCallback, false);
+     this.letterIndex.style.top = pos + 'px';

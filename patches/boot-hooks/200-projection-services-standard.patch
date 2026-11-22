@@ -1,0 +1,43 @@
+--- a/jci/sm/sm.conf
++++ b/jci/sm/sm.conf
+@@ -260,7 +260,8 @@
+             <dependency type="service" value="mfid"/>
+         </service>
+ 
+-        <service type="process" name="aap_service" path="/usr/bin/aap_service" autorun="yes" retry_count="0" reset_board="yes" stop_timeout="30000" affinity_mask="0x02">
++        <service type="process" name="aap_service" path="/usr/bin/aap_service" autorun="yes" retry_count="0" reset_board="no" stop_timeout="30000" affinity_mask="0x02">
++            <environ_var env_name="LD_PRELOAD" env_value="/data_persist/mazda-cmu-usb-patcher/libpatch-aap_service.so"/>
+             <dependency type="service" value="devicemanager"/>
+         </service>
+ 
+@@ -285,7 +286,9 @@
+             <dependency type="service" value="jciRM"/>
+         </service> 
+ 
+-        <service type="jci_service" name="jciCARPLAY" path="/jci/carplay/blmjcicarplay.so" autorun="yes" reset_board="yes" retry_count="0" ping_timeout="90000" save_at_shutdown="yes" save_blocking="no" save_timeout="90000" stop_timeout="40000">
++        <service type="jci_service" name="jciCARPLAY" path="/jci/carplay/blmjcicarplay.so" autorun="yes" reset_board="no" retry_count="0" ping_timeout="90000" save_at_shutdown="yes" save_blocking="no" save_timeout="90000" stop_timeout="40000">
++            <environ_var env_name="LD_PRELOAD" env_value="/data_persist/mazda-cmu-usb-patcher/libpatch-blmjcicarplay.so"/>
++            <environ_var env_name="LD_LIBRARY_PATH" env_value="/jci/lib:/usr/lib"/>
+             <dependency type="service" value="carplayd"/>
+             <dependency type="service" value="devicemanager"/>
+             <dependency type="service" value="jciBLMSettings"/>
+@@ -294,7 +297,8 @@
+             <dependency type="service" value="jciPA"/>
+         </service>
+ 
+-        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="yes" retry_count="0" ping_timeout="30000">
++        <service type="jci_service" name="jciAAPA" path="/jci/aapa/blmjciaapa.so" autorun="yes" reset_board="no" retry_count="0" ping_timeout="30000">
++            <environ_var env_name="LD_PRELOAD" env_value="/data_persist/mazda-cmu-usb-patcher/libpatch-blmjciaapa.so"/>
+             <dependency type="service" value="devicemanager"/>
+             <dependency type="service" value="aap_service"/>
+             <dependency type="service" value="jciBLMSettings"/>
+@@ -451,7 +455,8 @@
+             <dependency type="service" value="jciUSBMGR"/>
+         </service>        
+         
+-        <service type="jci_service" name="jcinavi" path="/jci/navi/svcjcinavi.so" autorun="yes" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="10000" >
++        <service type="jci_service" name="jcinavi" path="/jci/navi/svcjcinavi.so" autorun="yes" retry_count="6" reset_board="no" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="10000" >
++            <environ_var env_name="LD_PRELOAD" env_value="/data_persist/mazda-cmu-usb-patcher/libpatch-svcjcinavi.so"/>
+             <dependency type="service" value="stage_navi"/>
+             <dependency type="service" value="jciVBS"/>
+             <dependency type="service" value="jciBLMSettings"/>

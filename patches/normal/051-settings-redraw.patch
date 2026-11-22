@@ -1,0 +1,47 @@
+--- a/jci/gui/apps/vehsettings/js/vehsettingsApp.js
++++ b/jci/gui/apps/vehsettings/js/vehsettingsApp.js
+@@ -3994,8 +3994,13 @@
+     log.debug("_AutoDoorLockCtxtTmpltReadyToDisplay called...");
+     this.cachedSpeed = framework.common.getAtSpeedValue();
+     if (this.cachedSpeed != null)
++    {
+         this._DisableSpeedRestricted();
+-    this.populateListCtrl(this._currentContextTemplate);
++    }
++    else
++    {
++        this.populateListCtrl(this._currentContextTemplate);
++    }
+     if (this._isListChanged === true)
+     {
+         if (params && params.skipRestore != undefined)
+@@ -4012,8 +4017,13 @@
+     log.debug("_LightingCtxtTmpltReadyToDisplay called...");
+     this.cachedSpeed = framework.common.getAtSpeedValue();
+     if (this.cachedSpeed != null)
++    {
+         this._DisableSpeedRestricted();
+-    this.populateListCtrl(this._currentContextTemplate);
++    }
++    else
++    {
++        this.populateListCtrl(this._currentContextTemplate);
++    }
+     if (this._isListChanged === true)
+     {
+         if (params && params.skipRestore != undefined)
+@@ -4029,8 +4039,13 @@
+     log.debug("_SelectILBCtxtTmpltReadyToDisplay called...");
+     this.cachedSpeed = framework.common.getAtSpeedValue();
+     if (this.cachedSpeed != null)
++    {
+         this._DisableSpeedRestricted();
+-    this.populateListCtrl(this._currentContextTemplate);
++    }
++    else
++    {
++        this.populateListCtrl(this._currentContextTemplate);
++    }
+     if (this._isListChanged === true)
+     {
+         if (params && params.skipRestore != undefined)

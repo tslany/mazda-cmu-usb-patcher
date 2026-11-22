@@ -1,0 +1,14 @@
+--- a/etc/syslog-ng.conf
++++ b/etc/syslog-ng.conf
+@@ -217,9 +217,9 @@
+ 
+         #destination(d_buffer);
+         #destination(d_tcp);
+-        destination(d_console);
++        #destination(d_console);
+         #destination(d_message_log);
+-        #destination(d_dummy);
++        destination(d_dummy);
+         #destination(d_usertty);
+ 
+         #flags(flow-control);

@@ -1,0 +1,26 @@
+--- a/jci/sm/sm_WCP.conf
++++ b/jci/sm/sm_WCP.conf
+@@ -287,7 +287,7 @@
+             <dependency type="service" value="jciRM"/>
+         </service> 
+ 
+-        <service type="jci_service" name="jciCARPLAY" path="/jci/carplay/blmjcicarplay.so" autorun="yes" reset_board="no" retry_count="0" args="wcp" ping_timeout="90000" save_at_shutdown="yes" save_blocking="no" save_timeout="90000" stop_timeout="40000">
++        <service type="jci_service" name="jciCARPLAY" path="/jci/carplay/blmjcicarplay.so" autorun="yes" reset_board="no" retry_count="0" args="wcp" ping_timeout="90000" save_at_shutdown="yes" save_blocking="no" save_timeout="90000" stop_timeout="40000" affinity_mask="0x02">
+             <environ_var env_name="LD_PRELOAD" env_value="/data_persist/mazda-cmu-usb-patcher/libpatch-blmjcicarplay.so"/>
+             <environ_var env_name="LD_LIBRARY_PATH" env_value="/jci/lib:/usr/lib"/>
+             <dependency type="service" value="carplayd"/>
+@@ -610,12 +610,12 @@
+             <dependency type="service" value="start_network"/>
+         </service>
+         
+-        <service type="jci_service" name="NMS_svc" path="/jci/nms/nms.so" autorun="yes" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="3500" >
++        <service type="jci_service" name="NMS_svc" path="/jci/nms/nms.so" autorun="yes" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="3500" affinity_mask="0x02">
+             <dependency type="service" value="stage_wifi"/>
+             <dependency type="service" value="start_wifi"/>
+         </service>
+         
+-        <service type="jci_service" name="blm_nms_svc" path="/jci/nms/blm_nms.so" autorun="yes" retry_count="6" reset_board="yes" args="wcp" save_at_shutdown="yes" save_blocking="no" save_timeout="3500" >
++        <service type="jci_service" name="blm_nms_svc" path="/jci/nms/blm_nms.so" autorun="yes" retry_count="6" reset_board="yes" args="wcp" save_at_shutdown="yes" save_blocking="no" save_timeout="3500" affinity_mask="0x02">
+             <dependency type="service" value="stage_wifi"/>
+             <dependency type="service" value="NMS_svc"/>
+             <dependency type="service" value="system_mazda_my14"/>

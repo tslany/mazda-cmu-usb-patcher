@@ -1,0 +1,17 @@
+--- a/jci/gui/apps/vehsettings/js/vehsettingsApp.js
++++ b/jci/gui/apps/vehsettings/js/vehsettingsApp.js
+@@ -3520,8 +3520,13 @@
+     log.debug("_VehicleSettingsTabCtxtTmpltReadyToDisplay called...");   
+     this.cachedSpeed = framework.common.getAtSpeedValue();
+     if (this.cachedSpeed != null)
++    {
+         this._DisableSpeedRestricted();
+-    this.populateListCtrl(this._currentContextTemplate);  
++    }
++    else
++    {
++        this.populateListCtrl(this._currentContextTemplate);
++    }
+     if (this._isListChanged === true)
+     {
+         if (params && params.skipRestore != undefined)

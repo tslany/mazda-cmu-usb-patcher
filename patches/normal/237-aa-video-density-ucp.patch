@@ -1,0 +1,20 @@
+--- a/etc/aap_system_attributes_UCP.xml
++++ b/etc/aap_system_attributes_UCP.xml
+@@ -19,3 +19,2 @@
+             <height>480</height>
+-            <par>10670</par>
+         </display>
+@@ -46,2 +45,6 @@
+-                <density>141</density>
++                <density>155</density>
++                <real_density>155</real_density>
++                <par>10670</par>
++                <fps>60</fps>
++                <decoder_additional_depth>3</decoder_additional_depth>
+             </resolution>
+@@ -49,5 +52,3 @@
+                 <value>H.264_BP_L3.1</value>
+-                <decoder_additional_depth>3</decoder_additional_depth>
+             </codec_profile>
+-            <fps>60</fps>
+         </video>

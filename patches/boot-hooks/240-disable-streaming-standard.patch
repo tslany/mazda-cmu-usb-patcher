@@ -1,0 +1,64 @@
+--- a/jci/sm/sm.conf
++++ b/jci/sm/sm.conf
+@@ -69,18 +69,18 @@
+         
+         <service type="process" name="stage_wifi" path="/jci/scripts/stage_wifi.sh" autorun="yes" retry_count="0" exit_allowed="yes" started_after_exit_allowed="yes" reset_board="no" args="">
+             <dependency type="service" value="stage_3"/>
+-            <dependency type="service" value="blm_ira_aha"/> <!-- start after IR stage -->
++            <dependency type="service" value="stage_ir"/> <!-- start after IR stage -->
+         </service>
+         
+         <service type="process" name="stage_vr" path="/jci/scripts/stage_vr.sh" autorun="yes" retry_count="0" exit_allowed="yes" started_after_exit_allowed="yes" reset_board="no" args="5s" ready_flag="/var/run/stage_vr_ready">
+             <dependency type="service" value="stage_3"/>
+-            <dependency type="service" value="blm_ira_aha"/> <!-- start after IR stage -->
++            <dependency type="service" value="stage_ir"/> <!-- start after IR stage -->
+             <dependency type="service" value="jciCARPLAY"/>
+         </service>
+         
+         <service type="process" name="stage_gap2" path="/jci/scripts/stage_gap2.sh" autorun="yes" retry_count="0" exit_allowed="yes" started_after_exit_allowed="yes" reset_board="no" args="">
+             <dependency type="service" value="stage_3"/>
+-            <dependency type="service" value="blm_ira_aha"/>
++            <dependency type="service" value="stage_ir"/>
+         </service>
+         <!-- ============================================================================================= -->
+         
+@@ -478,33 +478,33 @@
+             <dependency type="service" value="system_mazda_my14"/>
+         </service>
+         
+-        <service type="process" name="irs_server" path="/jci/irs/irs_server" autorun="yes" reset_board="yes" retry_count="6" ready_flag="/var/run/irs_server_ready_flag" args="" >
++        <service type="process" name="irs_server" path="/jci/irs/irs_server" autorun="no" reset_board="yes" retry_count="6" ready_flag="/var/run/irs_server_ready_flag" args="" >
+             <dependency type="service" value="stage_ir"/>
+         </service>
+         
+-        <service type="process" name="irsstitcher_server" path="/jci/irs/irsstitcher_server" autorun="yes" reset_board="yes" retry_count="6" ready_flag="/var/run/irsstitcher_server_ready_flag" args="" >
++        <service type="process" name="irsstitcher_server" path="/jci/irs/irsstitcher_server" autorun="no" reset_board="yes" retry_count="6" ready_flag="/var/run/irsstitcher_server_ready_flag" args="" >
+             <dependency type="service" value="stage_ir"/>
+         </service>
+         
+-        <service type="jci_service" name="blm_ira_pandora" path="/jci/ira/svcjciblm_ira_pandora.so" autorun="yes" reset_board="yes" retry_count="6" args="">
++        <service type="jci_service" name="blm_ira_pandora" path="/jci/ira/svcjciblm_ira_pandora.so" autorun="no" reset_board="yes" retry_count="6" args="">
+             <dependency type="service" value="stage_ir"/>
+             <dependency type="service" value="irs_server"/>
+             <dependency type="service" value="bds"/>
+             <dependency type="service" value="audio_manager"/>
+         </service>
+         
+-        <service type="process" name="offboard_service" path="/jci/offboard/obs_svc" autorun="yes" reset_board="yes" retry_count="6" args="">
++        <service type="process" name="offboard_service" path="/jci/offboard/obs_svc" autorun="no" reset_board="yes" retry_count="6" args="">
+             <dependency type="service" value="stage_ir"/>
+         </service>
+         
+-        <service type="jci_service" name="blm_ira_stitcher" path="/jci/ira/svcjciblm_ira_stitcher.so" autorun="yes" reset_board="yes" retry_count="6" args="">
++        <service type="jci_service" name="blm_ira_stitcher" path="/jci/ira/svcjciblm_ira_stitcher.so" autorun="no" reset_board="yes" retry_count="6" args="">
+             <dependency type="service" value="stage_ir"/>
+             <dependency type="service" value="irsstitcher_server"/>
+             <dependency type="service" value="bds"/>
+             <dependency type="service" value="audio_manager"/>
+         </service>
+         
+-        <service type="jci_service" name="blm_ira_aha" path="/jci/ira/svcjciblm_ira_aha.so" autorun="yes" reset_board="yes" retry_count="6" args="">
++        <service type="jci_service" name="blm_ira_aha" path="/jci/ira/svcjciblm_ira_aha.so" autorun="no" reset_board="yes" retry_count="6" args="">
+             <dependency type="service" value="stage_ir"/>
+             <dependency type="service" value="offboard_service"/>
+             <dependency type="service" value="bds"/>

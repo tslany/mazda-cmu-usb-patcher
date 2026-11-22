@@ -1,0 +1,59 @@
+--- a/jci/gui/common/controls/List2/js/List2Ctrl.js
++++ b/jci/gui/common/controls/List2/js/List2Ctrl.js
+@@ -784,9 +784,9 @@
+  * =========================
+  * @return {void}
+  */
+-List2Ctrl.prototype._createPool = function()
++List2Ctrl.prototype._createPool = function(itemStyle)
+ {
+-    this.pool = {
++    this.pool = this.pool || {
+         empty : new Array(),        // 'empty' is internal style
+         draggable : new Array(),    // 'draggable' is internal style
+         ghost : new Array(),        // 'ghost' is internal style
+@@ -828,6 +828,12 @@
+         style38 : new Array()
+     };
+ 
++    this._poolInitializedStyles = this._poolInitializedStyles || {};
++    if (!this.pool.hasOwnProperty(itemStyle) || this._poolInitializedStyles[itemStyle])
++    {
++        return;
++    }
++
+     // the pool size (this.properties.poolsize) should be at least 3 times
+     // the visible items (one for above and two for below the top item)
+     var line1, line2,
+@@ -838,6 +844,11 @@
+ 
+     for (var i in this.pool)
+     {
++        if (i !== itemStyle)
++        {
++            continue;
++        }
++
+         for (var j=0; j<this.properties.poolsize; j++)
+         {
+             var li = document.createElement('li');
+@@ -1482,6 +1493,8 @@
+         }
+     }
+ 
++    this._poolInitializedStyles[itemStyle] = true;
++
+ };
+ 
+ /** 2. DEFAULT ITEMS CONFIGURATION **/
+@@ -2414,7 +2427,10 @@
+ List2Ctrl.prototype._getListItem = function(listItem, dataListIndex)
+ {
+ 
++    // Build only the pool style needed by the current data list.
++    this._createPool(listItem.itemStyle);
++
+     // get it from the pool
+     var li = this.pool[listItem.itemStyle].shift();
+ 
+     // remove any residual touch classes

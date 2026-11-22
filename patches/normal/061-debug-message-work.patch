@@ -1,0 +1,38 @@
+--- a/jci/gui/framework/js/GuiFramework.js
++++ b/jci/gui/framework/js/GuiFramework.js
+@@ -478,7 +478,10 @@
+         return;
+     }
+ 
+-    this.debug.logDebug("<font color=#7F0000>From Mmui: " + JSON.stringify(jsObject), "</font>");
++    if (this.debug.debugPanelEnabled)
++    {
++        this.debug.logDebug("<font color=#7F0000>From Mmui: " + JSON.stringify(jsObject), "</font>");
++    }
+     this._lastMmuiMessage = jsObject;
+ 
+     // Test for an Unknown UIA_uiaId from MMUI
+@@ -594,7 +597,10 @@
+         });
+         return;
+     }
+-    this.debug.logDebug("<font color=#7F0000>From DBAPI: " + JSON.stringify(jsObject), "</font>");
++    if (this.debug.debugPanelEnabled)
++    {
++        this.debug.logDebug("<font color=#7F0000>From DBAPI: " + JSON.stringify(jsObject), "</font>");
++    }
+ 
+     if (jsObject.msgType == "methodResponse")
+     {
+@@ -644,7 +650,10 @@
+          });
+         return;
+     }
+-    this.debug.logDebug("<font color=#7F0000>From APPSDK: " + JSON.stringify(jsObject), "</font>");
++    if (this.debug.debugPanelEnabled)
++    {
++        this.debug.logDebug("<font color=#7F0000>From APPSDK: " + JSON.stringify(jsObject), "</font>");
++    }
+ 
+     if (jsObject.msgType === "methodResponse" || jsObject.msgType === "methodErrorResponse")
+     {

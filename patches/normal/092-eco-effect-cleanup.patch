@@ -1,0 +1,16 @@
+--- a/jci/gui/apps/ecoenergy/controls/EcoEffect/js/EcoEffectCtrl.js
++++ b/jci/gui/apps/ecoenergy/controls/EcoEffect/js/EcoEffectCtrl.js
+@@ -568,6 +568,13 @@
+ {
+      clearInterval(this.treeAnimTimeout);
+      this.treeAnimTimeout = null;
++     if(this.rateGraphs)
++     {
++         clearInterval(this.rateGraphs.iStopGraph.intervalContext.animateDown);
++         clearInterval(this.rateGraphs.iStopGraph.intervalContext.animateUp);
++         this.rateGraphs.iStopGraph.intervalContext.animateDown = null;
++         this.rateGraphs.iStopGraph.intervalContext.animateUp = null;
++     }
+      if(this.umpCtrl)
+      {
+      	this.umpCtrl.cleanUp();

@@ -1,0 +1,14 @@
+--- a/jci/gui/apps/ecoenergy/controls/EcoStatus/js/EcoStatusCtrl.js
++++ b/jci/gui/apps/ecoenergy/controls/EcoStatus/js/EcoStatusCtrl.js
+@@ -3453,6 +3453,11 @@
+     // Clean up any capacitor level low-pass animation timer that may be running
+ 	this._stopArrowAnimation();
+ 	this._capChgLvlTimerCleanup(true);
++	this._chargeLvlTimerCleanup();
++	this._stopTireRotation();
++	this._mHybridCapChgLvlTimerCleanup();
++	this._mHybridStopArrowsAnimation();
++	this._mHybridStopWheelAnimation();
+ 
+     // Clean up the child button control
+     if (this.switchViewButtonCtrl)

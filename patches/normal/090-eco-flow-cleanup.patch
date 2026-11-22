@@ -1,0 +1,12 @@
+--- a/jci/gui/apps/ecoenergy/controls/EcoFlow/js/EcoFlowCtrl.js
++++ b/jci/gui/apps/ecoenergy/controls/EcoFlow/js/EcoFlowCtrl.js
+@@ -1003,6 +1003,9 @@
+ {
+     // Clean up any capacitor level low-pass animation timer that may be running
+     this._capChgLvlTimerCleanup(true);
++    this._stopTireRotation();
++    clearInterval(this.motorToBattInt);
++    this.motorToBattInt = null;
+ 
+     // Clean up the child button control
+     if (this.showUmpButtonCtrl)

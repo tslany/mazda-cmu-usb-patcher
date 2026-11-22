@@ -1,0 +1,16 @@
+--- a/jci/sm/sm.conf
++++ b/jci/sm/sm.conf
+@@ -667,11 +667,11 @@
+            <dependency type="service" value="settings"/>
+         </service>
+         
+-		<service type="jci_service" name="jciSXMS" path="/jci/sxms/svcjcisxms.so" autorun="yes" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="10000" ping_timeout="4000">
++		<service type="jci_service" name="jciSXMS" path="/jci/sxms/svcjcisxms.so" autorun="no" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="10000" ping_timeout="4000">
+ 			<dependency type="service" value="settings"/>
+ 		</service>
+ 		
+-		<service type="jci_service" name="jciXMMGR" path="/jci/xmmgr/svcjcixm_mgr.so" autorun="yes" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="5000">
++		<service type="jci_service" name="jciXMMGR" path="/jci/xmmgr/svcjcixm_mgr.so" autorun="no" retry_count="6" reset_board="yes" args="" save_at_shutdown="yes" save_blocking="no" save_timeout="5000">
+            <dependency type="service" value="jciVBS"/>           
+            <dependency type="service" value="jciSXMS"/>
+            <dependency type="service" value="jciBLMSettings"/>

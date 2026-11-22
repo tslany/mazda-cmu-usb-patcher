@@ -1,0 +1,10 @@
+--- a/etc/aap_system_attributes.xml
++++ b/etc/aap_system_attributes.xml
+@@ -23,6 +23,7 @@
+             <key_codes>
+                 <value>AAP_KEYCODE_SEARCH</value>
+                 <value>AAP_KEYCODE_MEDIA_PLAY</value>
++                <value>AAP_KEYCODE_MEDIA_PAUSE</value>
+                 <value>AAP_KEYCODE_MEDIA_PREVIOUS</value>
+                 <value>AAP_KEYCODE_MEDIA_NEXT</value>
+                 <value>AAP_KEYCODE_NAVIGATION</value>

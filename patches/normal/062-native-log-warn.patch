@@ -1,0 +1,7 @@
+--- a/config/common/log/settings.txt
++++ b/config/common/log/settings.txt
+@@ -1,3 +1,3 @@
+ COMMON_LOG_FORMAT=SYSLOGNGEXT
+ COMMON_LOG_STRIP=True
+-COMMON_LOG_LEVEL=Info
++COMMON_LOG_LEVEL=Warn

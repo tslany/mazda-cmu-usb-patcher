@@ -1,0 +1,171 @@
+--- a/jci/gui/framework/js/Websockets.js
++++ b/jci/gui/framework/js/Websockets.js
+@@ -197,162 +197,14 @@
+ 
+     this._mmuiWs.onmessage = function(e)
+     {
+-
+-        var rcvData = (new Uint8Array([].map.call(e.data, function(c) { return c.charCodeAt(0); } ))).buffer;
+-
+-        mRecvMsgCounter++;  // incriment the Msg recieved counter 
+-        if (mRecvMsgCounter == mRecvMsgCounterLimit) // is the Msg recieved counter is max value ?
+-        {
+-            mRecvMsgCounter = 0;    // reset the Msg recieved counter
+-            if (this._waitMsgArray.length != 0)
+-            {
+-                log.info("MMUI onmessage(): Force flush for message /msg stack number=" + this._waitMsgArray.length );
+-
+-                var sendCnt = 0;
+-                // Force flush for message of wait msg stack
+-                for (index = 0; index < this._waitMsgArray.length; index++)
+-                {
+-                    log.info("MMUI onmessage(): Force flush for message /msg=" + this._waitMsgArray[index] );
+-                    this._doRouteMmuiMsg(this._waitMsgArray[index]);
+-                    sendCnt++;
+-                }
+-                log.info("MMUI onmessage(): Force flush for message. Sent count=" + sendCnt );
+-
+-                // Delete for stack messaage
+-                this._waitMsgArray.length = 0;
+-            }
+-        }   // Msg recieved counter is limit
+-
+-
+-        // get length of JSON data
+-        var lenJson;
+-        if (this._isTargetMsg(e.data) == true)
+-        {
+-            lenJson = rcvData.length - 1;
+-            mMmuiWebsocketSeqCounter = rcvData[lenJson];
+-        }
+-        else
+-        {
+-            lenJson = rcvData.length;
+-        }
+-
+-        // copy string of JSON data
+-        var jsonStr = (new String(e.data)).substring(0, lenJson);
+-
+-//        log.debug("MMUI onmessage(): [mMmuiWebsocketSeqCounter]" + mMmuiWebsocketSeqCounter);
+-        
+-        if (this._isTargetMsg(jsonStr) == true)
++        // MMUI sends these messages in order, with one sequence byte after JSON.
++        // Route them directly; the stock reorder queue can lose screen updates.
++        var jsonStr = e.data;
++        if (this._isTargetMsg(jsonStr))
+         {
+-            if (this._isCtxtChg(jsonStr) == true)
+-            {
+-                if (this._waitMsgArray.length == 0 )    // msg stack is empty
+-                {
+-                    mMmuiWebsocketWaitSeqCounter = mMmuiWebsocketSeqCounter;    // update newest receive SeqCounter
+-
+-                    this._doRouteMmuiMsg(jsonStr);// send current msg
+-                }
+-                else
+-                {
+-                    if (mMmuiWebsocketWaitSeqCounter == mMmuiWebsocketSeqCounter)   // is SeqCounter Wait & new same ?
+-                    {
+-                        this._doRouteMmuiMsg(jsonStr);  // send current msg
+-                        
+-                        if (this._isStack( "focusStack", mMmuiWebsocketWaitSeqCounter ) == true && this._isStack( "transition", mMmuiWebsocketWaitSeqCounter ) == true)
+-                        {
+-                            this._isStack( "focusStack", mMmuiWebsocketWaitSeqCounter );
+-                            this._doRouteMmuiMsg(mStackOutput);  // send current msg
+-                            this._delStack( "focusStack", mMmuiWebsocketWaitSeqCounter );
+-                            mDoFocus = mMmuiWebsocketSeqCounter;
+-
+-                            this._isStack( "transition", mMmuiWebsocketWaitSeqCounter );
+-                            this._doRouteMmuiMsg(mStackOutput);  // send current msg
+-                            this._delStack( "transition", mMmuiWebsocketWaitSeqCounter );
+-                        }
+-                        if (this._isStack( "focusStack", mMmuiWebsocketWaitSeqCounter ) == true)
+-                        {
+-                            this._doRouteMmuiMsg(mStackOutput);  // send current msg
+-                            this._delStack( "focusStack", mMmuiWebsocketWaitSeqCounter );
+-                            mDoFocus = mMmuiWebsocketSeqCounter;
+-                        }
+-//                this._waitMsgArray.length = 0;  // clear for stack messaage
+-                    }
+-                    else
+-                    {
+-                        if (this._waitMsgArray.length == 0 )    // msg stack is empty
+-                        {
+-                           mRecvMsgCounter = 0;    // reset the Msg recieved counter
+-                        }
+-                        log.warn("MMUI onmessage(): new seq(" + mMmuiWebsocketSeqCounter + ") is not match expect seq(" + mMmuiWebsocketWaitSeqCounter + ") ,push message to waitMsgArray.");
+-                        this._waitMsgArray.push(jsonStr);   // push current msg
+-                    }
+-                }
+-            }
+-            else if (this._isfocusStack(jsonStr) == true)
+-            {
+-                if (mMmuiWebsocketWaitSeqCounter == mMmuiWebsocketSeqCounter)   // is SeqCounter Wait & new same ?
+-                {
+-                      this._doRouteMmuiMsg(jsonStr);  // send current msg
+-                      mDoFocus = mMmuiWebsocketSeqCounter;
+-                                          
+-                      if ( this._isStack( "transition", mMmuiWebsocketWaitSeqCounter ) == true)
+-                      {
+-                           this._doRouteMmuiMsg(mStackOutput);  // send current msg   //★
+-                      }
+-                }
+-                else
+-                {
+-                    if (this._waitMsgArray.length == 0 )    // msg stack is empty
+-                    {
+-                        mRecvMsgCounter = 0;    // reset the Msg recieved counter
+-                    }
+-
+-                    log.warn("MMUI onmessage(): new seq(" + mMmuiWebsocketSeqCounter + ") is not match expect seq(" + mMmuiWebsocketWaitSeqCounter + ") ,push message to waitMsgArray.");
+-                    arr = [jsonStr, mMmuiWebsocketSeqCounter];
+-                    this._waitMsgArray.push(arr);   // push current msg
+-
+-                    mMmuiWebsocketWaitSeqCounter = mMmuiWebsocketSeqCounter;    // update newest receive SeqCounter
+-                }
+-            }
+-            else if (this._isTransition(jsonStr) == true)
+-            {
+-                if (mMmuiWebsocketWaitSeqCounter == mMmuiWebsocketSeqCounter)   // is SeqCounter Wait & new same ?
+-                {
+-                     if (mDoFocus != mMmuiWebsocketSeqCounter)
+-                     {
+-                          log.warn("MMUI onmessage(): new seq(" + mMmuiWebsocketSeqCounter + ") is not match expect seq(" + mMmuiWebsocketWaitSeqCounter + ") ,push message to waitMsgArray."); //■
+-                          arr = [jsonStr, mMmuiWebsocketSeqCounter];
+-                          this._waitMsgArray.push(arr);   // push current msg
+-                          mMmuiWebsocketWaitSeqCounter = mMmuiWebsocketSeqCounter;    // update newest receive SeqCounter
+-                     }
+-                     else
+-                     {
+-                          this._doRouteMmuiMsg(jsonStr);  // send current msg
+-                     }
+-                }
+-                else
+-                {
+-                    if (this._waitMsgArray.length == 0 )    // msg stack is empty
+-                    {
+-                        mRecvMsgCounter = 0;    // reset the Msg recieved counter
+-                    }
+-
+-                    log.warn("MMUI onmessage(): new seq(" + mMmuiWebsocketSeqCounter + ") is not match expect seq(" + mMmuiWebsocketWaitSeqCounter + ") ,push message to waitMsgArray.");
+-                    arr = [jsonStr, mMmuiWebsocketSeqCounter];
+-                    this._waitMsgArray.push(arr);   // push current msg
+-                    mMmuiWebsocketWaitSeqCounter = mMmuiWebsocketSeqCounter;    // update newest receive SeqCounter
+-                }
+-            }
+-            else
+-            {
+-                log.error("MMUI onmessage(): received msg is out of scope /msg=" + jsonStr);
+-            }
+-        }
+-        else
+-        {
+-            this._doRouteMmuiMsg(jsonStr);  // send current msg
++            jsonStr = jsonStr.substring(0, jsonStr.length - 1);
+         }
+-
+-
++        this._doRouteMmuiMsg(jsonStr);
+     }.bind(this);
+ 
+     this._mmuiWs.onerror = function(e)

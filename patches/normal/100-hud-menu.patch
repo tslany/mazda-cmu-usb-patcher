@@ -1,0 +1,96 @@
+--- a/jci/gui/apps/vehsettings/js/vehsettingsApp.js
++++ b/jci/gui/apps/vehsettings/js/vehsettingsApp.js
+@@ -3412,10 +3412,10 @@
+ vehsettingsApp.prototype._HUDDispInfoCtxtIn = function()
+ {
+     log.debug("_HUDDispInfoCtxtIn called...");
+ 	var region = framework.localize.getRegion();			
+-	if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") )  //CI-7264 NA -> NA/4A/CH
++	if (true) // Restore the full HUD menu across regions.
+ 	{
+ 		this._HUDDispInfoCtxtList = {
+ 			itemCountKnown : true,
+         itemCount: 3,
+ 			items : [
+@@ -3456,11 +3456,11 @@
+ vehsettingsApp.prototype._CHUDNavigationCtxtIn = function()
+ {
+     log.debug("_CHUDNavigationCtxtIn called...");
+ 	var region = framework.localize.getRegion();			
+     //this.populateListCtrl(this._currentContextTemplate);
+-	if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") ) //CI-7264 NA -> NA/4A/CH
++	if (true) // Restore the full HUD menu across regions.
+ 	{
+ 		this._CHUDNavigationInfoCtxtDataList = {
+ 			itemCountKnown : true,
+ 			itemCount : 4,
+ 			items: [ 
+@@ -4813,11 +4813,11 @@
+ vehsettingsApp.prototype._CHUDNavigation = function(msg)
+ {
+     log.debug("_CHUDNavigation received", msg.params.payload.evData); 
+     this._cachedCHudNavindex = msg.params.payload.evData;
+ 	var region = framework.localize.getRegion(); 
+-	if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") ) //CI-7264 NA -> NA/4A/CH
++	if (true) // Restore the full HUD menu across regions.
+ 	{
+ 		switch(msg.params.payload.evData)
+ 		{
+ 			case "Navigation_Off":
+ 				this._cachedCHudNavLabel = "CHudNav_Off";
+@@ -4875,9 +4875,9 @@
+                 this._currentContextTemplate.list2Ctrl.setToggleValue(0,this._cachedNaviVal);
+ 				var region = framework.localize.getRegion(); 
+ 				var currLang = framework.localize.getCurrLang();	//CI-7264 Only English/French/Spanish
+-				if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") ) //CI-7264 NA -> NA/4A/CH
++				if (true) // Restore the full HUD menu across regions.
+ 				{
+ 					if(this._cachedNaviVal === 1)
+ 					{	
+ 						if((currLang == "en_US") || (currLang == "en_UK") || (currLang == "en_AU") || (currLang == "fr_CN") || (currLang == "fr_FR") || (currLang == "es_MX") || (currLang == "es_ES"))
+ 						{
+@@ -7582,9 +7582,9 @@
+             case "HUDDisplayInformation": 
+ 					var region = framework.localize.getRegion();
+ 					var currLang = framework.localize.getCurrLang();	//CI-7264 Only English/French/Spanish
+-					if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") ) //CI-7264 NA -> NA/4A/CH
++					if (true) // Restore the full HUD menu across regions.
+ 					{
+ 						if(this._cachedNaviVal === 1 )
+ 						{       
+ 							if((currLang == "en_US") || (currLang == "en_UK") || (currLang == "en_AU") || (currLang == "fr_CN") || (currLang == "fr_FR") || (currLang == "es_MX") || (currLang == "es_ES"))
+ 							{
+@@ -7694,10 +7694,10 @@
+ 			case "HUDNavigation" :
+                 var tempChange=0;
+ 				var region = framework.localize.getRegion();
+ 				var currLang = framework.localize.getCurrLang();	//CI-7264 Only English/French/Spanish
+-				if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") ) //CI-7264 NA -> NA/4A/CH
++				if (true) // Restore the full HUD menu across regions.
+ 				{
+ 					switch(this._cachedCHudNavindex)
+ 					{
+ 						case "Navigation_Off" :
+ 							tempChange = 0;
+@@ -11113,8 +11113,8 @@
+ 		case 'SelectHUDNavigation':
+ 			var region = framework.localize.getRegion();			
+-			if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") )
++			if (true) // Restore the full HUD menu across regions.
+ 			{
+ 				switch(params.itemIndex)
+ 				{
+ 					case 0:
+ 						this._cachedCHudNavindex="Navigation_Off";
+@@ -11167,10 +11167,10 @@
+                 this._cachedNaviVal = params.additionalData;
+                 framework.sendEventToMmui(this.uiaId, "SetHudNavigation", { payload : { evData : params.additionalData} } );
+ 				var region = framework.localize.getRegion();			
+ 				var currLang = framework.localize.getCurrLang();	//CI-7264 Only English/French/Spanish
+-				if((framework.getSharedData("syssettings","DestinationCode") !== "SETTINGS_Destination_JP" ) && (region !== "Region_Europe") )  //CI-7264 NA -> NA/4A/CH
++				if (true) // Restore the full HUD menu across regions.
+ 				{
+ 					if(this._cachedNaviVal===1)
+ 					{       
+ 						if((currLang == "en_US") || (currLang == "en_UK") || (currLang == "en_AU") || (currLang == "fr_CN") || (currLang == "fr_FR") || (currLang == "es_MX") || (currLang == "es_ES"))
+ 						{
